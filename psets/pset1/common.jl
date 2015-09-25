@@ -220,4 +220,18 @@ function enclosed_area(xs, ys)
     s
 end
 
+# loadtxt since readdlm can't ignore empty value
+
+export loadtxt
+
+function loadtxt{T}(fname, t::Type{T}=Float64)
+    open(fname) do fd
+        lines = Vector{T}[]
+        for line in eachline(fd)
+            push!(lines, T[parse(T, x) for x in split(line)])
+        end
+        lines
+    end
+end
+
 end
