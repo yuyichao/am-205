@@ -55,3 +55,27 @@ function fsolve!(L::Matrix{BinNum}, b::Vector{BinNum}, out=similar(b))
     end
     b
 end
+
+# Modify U, b and out in place
+function rsolve!(U::Matrix{BinNum}, b::Vector{BinNum}, out=similar(b))
+    len = length(b)
+    if size(U) != (len, len) || length(out) != len
+        throw(ArgumentError("Whatever...."))
+    end
+    @inbounds for i in len:-1:1
+        if !U[i, i].v
+            throw(DivideError())
+        end
+        if b[i].v
+            # SIMD for this doesn't currently work
+            # JuliaLang/julia#13104
+            @simd for j in 1:(i - 1)
+                b[j] += U[j, i]
+            end
+        end
+        @simd for j in 1:(i - 1)
+            U[j, i] = false
+        end
+    end
+    b
+end
