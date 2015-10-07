@@ -1,22 +1,25 @@
 #!/usr/bin/julia -f
 
-import Base: *, +, /, \, -
+import Base: *, +, /, \, -, <, >, <=, >=
 
-immutable BinNum
+# Implementing BinNum
+immutable BinNum <: Integer
     v::Bool
 end
 
 Base.show(io::IO, n::BinNum) = Base.write(io, n.v ? "1" : "0")
+Base.promote_rule{T<:Integer}(::Type{BinNum}, ::Type{T}) = BinNum
 
 Base.convert(::Type{BinNum}, v::Bool) = BinNum(v)
 Base.convert{T<:Integer}(::Type{BinNum}, v::T) = BinNum(v != 0)
+Base.convert(::Type{BinNum}, v::BinNum) = v
 Base.zero(::Type{BinNum}) = BinNum(false)
 Base.one(::Type{BinNum}) = BinNum(true)
 Base.zero(::BinNum) = BinNum(false)
 Base.one(::BinNum) = BinNum(true)
 Base.real(n::BinNum) = n
 Base.abs(n::BinNum) = n
-Base.isless(n1::BinNum, n2::BinNum) = n1.v < n2.v
+Base.isless(n1::BinNum, n2::BinNum) = isless(n1.v, n2.v)
 Base.inv(n::BinNum) = BinNum(true) / n
 
 @inline *(x::BinNum, y::BinNum) = BinNum(x.v && y.v)
@@ -24,6 +27,10 @@ Base.inv(n::BinNum) = BinNum(true) / n
 @inline -(x::BinNum, y::BinNum) = BinNum(x.v $ y.v)
 @inline /(x::BinNum, y::BinNum) = BinNum(x.v ÷ y.v)
 @inline \(x::BinNum, y::BinNum) = BinNum(y.v ÷ x.v)
+@inline <(x::BinNum, y::BinNum) = x.v < y.v
+@inline <=(x::BinNum, y::BinNum) = x.v <= y.v
+@inline >(x::BinNum, y::BinNum) = x.v > y.v
+@inline >=(x::BinNum, y::BinNum) = x.v >= y.v
 
 # L = BinNum[1 0 0 0
 #            0 1 0 0
@@ -134,6 +141,7 @@ function Base.lu(A::Matrix{BinNum})
 end
 
 function lu_perm(A::Matrix{BinNum})
+    m, n = size(A)
     L, U, Plist = lu(A)
     P = zeros(BinNum, m, m)
     @inbounds for i in 1:m
@@ -144,6 +152,7 @@ end
 
 # Debugging only =)
 function lu_perm_base(A::Matrix{BinNum})
+    m, n = size(A)
     # add the optional parameter so that we dispatch to the generic
     # Base version
     L, U, Plist = lu(A, Val{true})
@@ -153,3 +162,15 @@ function lu_perm_base(A::Matrix{BinNum})
     end
     L, U, P
 end
+
+# A = BinNum[1 0 0 1
+#            1 1 0 0
+#            0 1 0 0
+#            0 0 1 1]
+
+# L1, U1, P1 = lu_perm(A)
+# L2, U2, P2 = lu_perm_base(A)
+
+# println(L1 - L2)
+# println(U1 - U2)
+# println(P1 - P2)
