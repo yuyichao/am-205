@@ -7,11 +7,13 @@ immutable BinNum <: Integer
     v::Bool
 end
 
+# Many of the following functions are only needed in order to use the Base
+# solvers
 Base.show(io::IO, n::BinNum) = Base.write(io, n.v ? "1" : "0")
 Base.promote_rule{T<:Integer}(::Type{BinNum}, ::Type{T}) = BinNum
 
 Base.convert(::Type{BinNum}, v::Bool) = BinNum(v)
-Base.convert{T<:Integer}(::Type{BinNum}, v::T) = BinNum(v != 0)
+Base.convert{T<:Integer}(::Type{BinNum}, v::T) = BinNum(v % 2 != 0)
 Base.convert(::Type{BinNum}, v::BinNum) = v
 Base.zero(::Type{BinNum}) = BinNum(false)
 Base.one(::Type{BinNum}) = BinNum(true)
@@ -21,6 +23,8 @@ Base.real(n::BinNum) = n
 Base.abs(n::BinNum) = n
 Base.isless(n1::BinNum, n2::BinNum) = isless(n1.v, n2.v)
 Base.inv(n::BinNum) = BinNum(true) / n
+Base.typemax(::Type{BinNum}) = BinNum(true)
+Base.typemin(::Type{BinNum}) = BinNum(false)
 
 @inline *(x::BinNum, y::BinNum) = BinNum(x.v && y.v)
 @inline +(x::BinNum, y::BinNum) = BinNum(x.v $ y.v)
@@ -174,3 +178,20 @@ end
 # println(L1 - L2)
 # println(U1 - U2)
 # println(P1 - P2)
+
+function Base.tryparse_internal(::Type{BinNum}, s::AbstractString, startpos::Int,
+                                endpos::Int, base::Int, raise::Bool)
+    int_res = Base.tryparse_internal(Int, s, startpos, endpos, base, raise)
+    !isnull(int_res) && return Nullable(BinNum(get(int_res)))
+    return Nullable{BinNum}()
+end
+
+# println(readdlm("q2_large/a.txt", ' ', BinNum))
+# Test for JuliaLang/julia#13483
+# println(readdlm("q2_large/a.txt", ' ', BigInt))
+
+# Which is basically `Base.(:\)` ...
+function solve_lu(A, b)
+    L, U, P = lu_perm(A)
+    rsolve!(U, fsolve!(L, P * b))
+end
