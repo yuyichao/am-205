@@ -1,5 +1,7 @@
 #!/usr/bin/julia -f
 
+using JSON
+
 include("generate_g.jl")
 
 compile_typeof(a) = isa(a,Type) ? Type{a} : typeof(a)
@@ -64,17 +66,32 @@ end
 function time_generate(n)
     G = zeros(n, n)
 
-    @time_func generate_g(n)
-    @time_func generate_g!(G)
-    @time_func generate_g_c!(G)
-    @time_func generate_g_cilk!(G)
-    @time_func generate_g_omp!(G)
-    @time_func fill!(G, 0)
-    @time_func fill_memset(G)
-    @time_func fill_cilk(G)
-    @time_func fill_omp(G)
+    t_alloc = @time_func generate_g(n)
+    t_gen = @time_func generate_g!(G)
+    t_gen_c = @time_func generate_g_c!(G)
+    t_gen_cilk = @time_func generate_g_cilk!(G)
+    t_gen_omp = @time_func generate_g_omp!(G)
+    t_memset = @time_func fill_memset(G)
+    t_fill = @time_func fill!(G, 0)
+    t_fill_cilk = @time_func fill_cilk(G)
+    t_fill_omp = @time_func fill_omp(G)
+
+    return Dict("n" => n,
+                "alloc" => t_alloc,
+                "gen" => t_gen,
+                "gen_c" => t_gen_c,
+                "gen_cilk" => t_gen_cilk,
+                "gen_omp" => t_gen_omp,
+                "memset" => t_memset,
+                "fill" => t_fill,
+                "fill_cilk" => t_fill_cilk,
+                "fill_omp" => t_fill_omp)
 end
 
-time_generate(100)
-time_generate(1000)
-time_generate(10000)
+time_generates() =
+    [time_generate(n) for n in [1, 2, 5, 10, 20, 50,
+                                100, 200, 500, 1000, 2000, 5000, 10000]]
+
+open(ARGS[1], "w") do io
+    JSON.print(io, time_generates())
+end
