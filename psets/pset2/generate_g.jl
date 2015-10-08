@@ -1,39 +1,5 @@
 #!/usr/bin/julia -f
 
-macro time_func(ex::Expr, rep)
-    ex.head == :call || throw(ArgumentError("Expression has to be a function call"))
-    f = ex.args[1]
-
-    # Only works in global scope
-    args = eval(current_module(), Expr(:tuple, ex.args[2:end]...))::Tuple
-    argnames = Symbol[gensym("args") for i in 1:length(args)]
-    types = map(typeof, args)
-    quote
-        function timing_wrapper()
-            println($f, $types)
-            $f($(args...))
-            gc()
-            n = 100
-            times = Array{Float64}(n)
-            _rep::Int = $rep
-            for i in 1:n
-                gc()
-                t = @elapsed for j in 1:_rep
-                    $f($(args...))
-                end
-                @inbounds times[i] = t / _rep
-            end
-            gc()
-            mean_t = mean(times)
-            mean_t2 = mean(times.^2)
-            std_t = sqrt((mean_t2 - mean_t^2) / (n - 1))
-            println("$mean_t ± $std_t")
-            mean_t, std_t
-        end
-        timing_wrapper()
-    end
-end
-
 function generate_g!(G)
     n = size(G, 1)
     @inbounds for i in 1:(n - 1)
@@ -76,15 +42,3 @@ function generate_g(n)
     G = Array{Float64}(n, n)
     generate_g!(G)
 end
-
-G = zeros(1000, 1000)
-
-@time_func generate_g(1000) 100
-@time_func generate_g!(G) 100
-@time_func generate_g_c!(G) 100
-@time_func generate_g_cilk!(G) 100
-@time_func generate_g_omp!(G) 100
-@time_func fill!(G, 0) 100
-@time_func fill_memset(G) 100
-@time_func fill_cilk(G) 100
-@time_func fill_omp(G) 100
