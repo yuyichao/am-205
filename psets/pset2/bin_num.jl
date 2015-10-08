@@ -13,8 +13,11 @@ Base.show(io::IO, n::BinNum) = Base.write(io, n.v ? "1" : "0")
 Base.promote_rule{T<:Integer}(::Type{BinNum}, ::Type{T}) = BinNum
 
 Base.convert(::Type{BinNum}, v::Bool) = BinNum(v)
-Base.convert{T<:Integer}(::Type{BinNum}, v::T) = BinNum(v % 2 != 0)
 Base.convert(::Type{BinNum}, v::BinNum) = v
+Base.convert{T<:Integer}(::Type{BinNum}, v::T) = BinNum(v % 2 != 0)
+Base.convert(::Type{Bool}, v::BinNum) = v.v
+Base.convert{T<:Integer}(::Type{T}, v::BinNum) = convert(T, v.v)
+
 Base.zero(::Type{BinNum}) = BinNum(false)
 Base.one(::Type{BinNum}) = BinNum(true)
 Base.zero(::BinNum) = BinNum(false)
