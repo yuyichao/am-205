@@ -72,8 +72,14 @@ fill_omp(G) =
     ccall((:fill_omp, "./libgen_g.so"),
           Void, (Ptr{Void}, Csize_t), G, length(G))
 
+function generate_g(n)
+    G = Array{Float64}(n, n)
+    generate_g!(G)
+end
+
 G = zeros(1000, 1000)
 
+@time_func generate_g(1000) 100
 @time_func generate_g!(G) 100
 @time_func generate_g_c!(G) 100
 @time_func generate_g_cilk!(G) 100
