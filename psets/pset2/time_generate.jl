@@ -61,10 +61,10 @@ macro time_func(ex::Expr)
     end
 end
 
-function f()
-    G = zeros(1000, 1000)
+function time_generate(n)
+    G = zeros(n, n)
 
-    @time_func generate_g(1000)
+    @time_func generate_g(n)
     @time_func generate_g!(G)
     @time_func generate_g_c!(G)
     @time_func generate_g_cilk!(G)
@@ -75,4 +75,6 @@ function f()
     @time_func fill_omp(G)
 end
 
-f()
+time_generate(100)
+time_generate(1000)
+time_generate(10000)
