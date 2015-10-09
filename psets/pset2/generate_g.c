@@ -1,5 +1,5 @@
 // compile using GCC 5.2.0 with the following command line
-// gcc -fopenmp -fcilkplus -mavx2 -fPIC -Ofast generate_g.c -o libgen_g.so \
+// gcc -fopenmp -fcilkplus -mavx2 -fPIC -Ofast generate_g.c -o libgen_g.so
 //     -shared -Wall -Wextra
 
 #include <stddef.h>
