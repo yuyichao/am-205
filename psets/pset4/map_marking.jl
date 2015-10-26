@@ -51,6 +51,7 @@ function mark_floor_map!(data, start)
         empty!(prev_frontier)
         prev_frontier, frontier = frontier, prev_frontier
     end
+    nothing
 end
 
 mark_floor_map!(data, (59, 17))
@@ -86,9 +87,10 @@ function mark_neighbers!(data)
             v_px = ifelse(data[i + 1, j] == 0, 0x0, 0x8)
             v_py = ifelse(data[i, j + 1] == 0, 0x0, 0x10)
             v_neighbers = (v_my | v_mx) | (v_px | v_py)
-            data[i, j] = ifelse(v, 0, v_neighbers | 0x1)
+            data[i, j] = ifelse(v, 0x0, v_neighbers | 0x1)
         end
     end
+    nothing
 end
 
 mark_neighbers!(data)
