@@ -51,11 +51,46 @@ function mark_floor_map!(data, start)
         empty!(prev_frontier)
         prev_frontier, frontier = frontier, prev_frontier
     end
-    data
 end
 
 mark_floor_map!(data, (59, 17))
 
-imshow(data, interpolation="none")
-savefig("pierce_mark_reachable.png")
-show()
+# imshow(data, interpolation="none")
+# savefig("pierce_mark_reachable.png")
+
+# Next we can mark on each pixels what kind of space it is.
+# We use bits flags to store whether the point, or its neighbers are valid
+# grid points. In the order of self, y - 1, x - 1, x + 1, y + 1 (from low to
+# high bit starting with the lowest bit)
+function mark_neighbers!(data)
+    # The value on each pixels are really inconsistent right now. Since we
+    # aren't really going through the pixels in a simple order to mark the
+    # type of their neighbers, it's easier to normalize the values first.
+    @inbounds @simd for i in eachindex(data)
+        v = data[i]
+        data[i] = ifelse(v == 2, 1, 0)
+    end
+    # Now we can actually mark the neighber types
+    # Again, we assume the edges are not interesting and just skip them
+    # (Too lazy to write code specific for the edges that will not be
+    # executed anyway....)
+    @inbounds for j in 2:(size(data, 2) - 1)
+        @simd for i in 2:(size(data, 1) - 1)
+            # We mask off the wall while marking the neighbers so `v == 0` is
+            # enough to tell if it's in the wall (instead of `v & 1 == 0`)
+            v_my = ifelse(data[i, j - 1] == 0, 0x0, 0x2)
+            v_mx = ifelse(data[i - 1, j] == 0, 0x0, 0x4)
+            # This load is free, we write to it anyway later. Might as well use
+            # it to mask off the wall completely
+            v = data[i, j] == 0
+            v_px = ifelse(data[i + 1, j] == 0, 0x0, 0x8)
+            v_py = ifelse(data[i, j + 1] == 0, 0x0, 0x10)
+            v_neighbers = (v_my | v_mx) | (v_px | v_py)
+            data[i, j] = ifelse(v, 0, v_neighbers | 0x1)
+        end
+    end
+end
+
+mark_neighbers!(data)
+# imshow(data, interpolation="none")
+# savefig("pierce_mark_neighbers.png")
