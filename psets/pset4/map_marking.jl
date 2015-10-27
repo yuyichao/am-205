@@ -1,6 +1,6 @@
 #!/usr/bin/julia -f
 
-using PyPlot
+# using PyPlot
 
 data = readdlm("pierce.txt", ' ', UInt32)
 
@@ -94,5 +94,8 @@ function mark_neighbers!(data)
 end
 
 mark_neighbers!(data)
+
 # imshow(data, interpolation="none")
 # savefig("pierce_mark_neighbers.png")
+
+writedlm("pierce_normalized.txt", data, ' ')
