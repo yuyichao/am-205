@@ -38,13 +38,17 @@ Base.call(::DummyCollector, buff, idx) = nothing
 
 immutable FullCollector
     result::Array{Float32,3}
-    FullCollector(map_data, nsteps) = new(Array{Float32}(size(map_data)...,
-                                                         nsteps))
+    skip::Int
+    FullCollector(map_data, nsteps, skip=1) =
+        new(Array{Float32}(size(map_data)...,
+                           nsteps ÷ skip), skip)
 end
 
 function Base.call(c::FullCollector, buff, idx)
+    (idx - 1) % c.skip != 0 && return
+    idx = (idx - 1) ÷ c.skip + 1
     res = c.result
-    # @assert idx <= size(res, 3)
+    @assert idx <= size(res, 3)
     @inbounds for j in 1:size(res, 2)
         @simd for i in 1:size(res, 1)
             res[i, j, idx] = abs2(buff[i, j])
@@ -144,19 +148,19 @@ function propagate_wave(map_data, initializer, drive_override, c, _Δt, h,
     nothing
 end
 
-function main(nstep)
+function main(nstep, Δt)
     # collector = DummyCollector()
-    collector = FullCollector(map_data, nstep)
+    collector = FullCollector(map_data, nstep, 20)
     @time propagate_wave(map_data, ZeroInitializer(),
                          SinDrive(10f0, 100f0π, 58:61, 16:19),
-                         3.43f4, 1f-4, 36.6f0, nstep, collector)
+                         3.43f4, Δt, 36.6f0, nstep, collector)
     collector
 end
 
-const collector = main(20_000)
+const collector = main(20_000, 1f-4)
 
-using PyPlot
 using PyCall
+using PyPlot
 const animation = pyimport("matplotlib.animation")
 
 const fig = figure(figsize=(100, 200))
@@ -168,18 +172,20 @@ const im = imshow(collector.result[:, :, 1] ./ maximum(collector.result[:, :, 1]
                   interpolation="none")
 
 # initialization function: plot the background of each frame
-function plot_init()
-    plot_animate(0)
-end
+plot_init() = plot_animate(0)
 
 # animation function.  This is called sequentially
 function plot_animate(i)
-    data = log(collector.result[:, :, i + 1])
+    data = log1p(collector.result[:, :, i + 1])
     im[:set_data](data ./ maximum(data))
     (im,)
 end
 
-# call the animator.  blit=True means only re-draw the parts that have changed.
-anim = animation[:FuncAnimation](fig, plot_animate, init_func=plot_init,
-                                 frames=20_000, interval=2, blit=true)
+@time anim = animation[:FuncAnimation](fig, plot_animate, init_func=plot_init,
+                                       frames=size(collector.result, 3),
+                                       interval=16)
+# Somehow the saver only saves the part of the animation shown on the screen...
 show()
+FFwriter = animation[:FFMpegWriter](fps=60)
+@time anim[:save]("pierce.mp4", writer=FFwriter, fps=60,
+                  extra_args=["-vcodec", "libx264"])
