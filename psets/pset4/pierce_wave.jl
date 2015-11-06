@@ -5,6 +5,14 @@
 # because the CPU needs to do extra work to splat a <i8 x 8> to a 256bit ymm*
 # register. Memory bandwidth doesn't seems to be an issue.
 const map_data = readdlm("pierce_normalized.txt", ' ', UInt32)
+const orig_map = readdlm("pierce.txt", ' ', UInt32)
+
+@inline color_map_r(v::Float32) =
+    ifelse(v < 0.5f0, ifelse(v < 0.25f0, 1f0, (0.5f0 - v) * 4), 0f0)
+@inline color_map_g(v::Float32) =
+    ifelse(v < 0.75f0, ifelse(v < 0.25f0, v * 4, 1f0), (1f0 - v) * 4)
+@inline color_map_b(v::Float32) =
+    ifelse(v < 0.5f0, 0f0, ifelse(v < 0.75f0, (v - 0.5f0) * 4, 1f0))
 
 immutable ZeroInitializer
 end
@@ -88,7 +96,7 @@ function propagate_wave(map_data, initializer, drive_override, c, _Δt, h,
     # there's a big gap in between. However, in the direction we are looping
     # over in the inner loop, the largest gap is ~ 8 pixels, which is basically
     # the vector size for f32 with AVX2 instructions and smaller than the size
-    # of the cache line (cache line might not matter to much though since the
+    # of the cache line (cache line might not matter too much though since the
     # whole buffer fits in L2 cache). Therefore, we simply figure out the lower
     # and upper bound for each index. (A more general purpose function should
     # record the column number, lower bound, upper bound triplet instead).
@@ -148,44 +156,116 @@ function propagate_wave(map_data, initializer, drive_override, c, _Δt, h,
     nothing
 end
 
+immutable FramesCollector{N}
+    frames::NTuple{N,Array{Float32,3}}
+    frame_nums::NTuple{N,Int}
+    @generated function FramesCollector(map_data, frame_nums::NTuple{N,Int})
+        quote
+            map_size = size(map_data)
+            frames = ($([:(Array{Float32}(map_size..., 3)) for i in 1:N]...),)
+            $(Expr(:new, FramesCollector{N}, :frames, :frame_nums))
+        end
+    end
+end
+
+FramesCollector{N}(map_data, frame_nums::NTuple{N,Int}) =
+    FramesCollector{N}(map_data, frame_nums)
+
+function Base.call{N}(c::FramesCollector{N}, buff, idx)
+    frame_nums = c.frame_nums
+    @inbounds for k in 1:N
+        # O(N)... whatever...
+        if idx == frame_nums[k]
+            vmax = max(-minimum(buff), maximum(buff))
+            frame = c.frames[k]
+            for j in 1:size(frame, 2)
+                for i in 1:size(frame, 1)
+                    px_t = map_data[i, j]
+                    if px_t != 0
+                        v = (buff[i, j] / vmax + 1) / 2
+                        frame[i, j, 1] = color_map_r(v)
+                        frame[i, j, 2] = color_map_g(v)
+                        frame[i, j, 3] = color_map_b(v)
+                    elseif orig_map[i, j] != 0
+                        frame[i, j, 1] = 0
+                        frame[i, j, 2] = 0
+                        frame[i, j, 3] = 0
+                    else
+                        frame[i, j, 1] = 1
+                        frame[i, j, 2] = 1
+                        frame[i, j, 3] = 1
+                    end
+                end
+            end
+        end
+    end
+    nothing
+end
+
 function main(nstep, Δt)
     # collector = DummyCollector()
-    collector = FullCollector(map_data, nstep, 20)
+    # collector = FullCollector(map_data, nstep, 20)
+    collector = FramesCollector(map_data, (Int(0.015 ÷ Δt) + 1,
+                                           Int(0.105 ÷ Δt) + 1,
+                                           Int(0.505 ÷ Δt) + 1,
+                                           Int(1.005 ÷ Δt) + 1))
     @time propagate_wave(map_data, ZeroInitializer(),
                          SinDrive(10f0, 100f0π, 58:61, 16:19),
                          3.43f4, Δt, 36.6f0, nstep, collector)
     collector
 end
-
 const collector = main(20_000, 1f-4)
 
-using PyCall
 using PyPlot
-const animation = pyimport("matplotlib.animation")
-
-const fig = figure(figsize=(100, 200))
-const ax = gca()
-ax[:set_xticks]([])
-ax[:set_yticks]([])
-
-const im = imshow(collector.result[:, :, 1] ./ maximum(collector.result[:, :, 1]),
-                  interpolation="none")
-
-# initialization function: plot the background of each frame
-plot_init() = plot_animate(0)
-
-# animation function.  This is called sequentially
-function plot_animate(i)
-    data = log1p(collector.result[:, :, i + 1])
-    im[:set_data](data ./ maximum(data))
-    (im,)
-end
-
-@time anim = animation[:FuncAnimation](fig, plot_animate, init_func=plot_init,
-                                       frames=size(collector.result, 3),
-                                       interval=16)
-# Somehow the saver only saves the part of the animation shown on the screen...
+figure()
+imshow(collector.frames[1], interpolation="none")
+title("0.015s")
+savefig("pierce_015")
+figure()
+imshow(collector.frames[2], interpolation="none")
+title("0.105s")
+savefig("pierce_105")
+figure()
+imshow(collector.frames[3], interpolation="none")
+title("0.505s")
+savefig("pierce_505")
+figure()
+imshow(collector.frames[4], interpolation="none")
+title("1.005s")
+savefig("pierce_1005")
 show()
-FFwriter = animation[:FFMpegWriter](fps=60)
-@time anim[:save]("pierce.mp4", writer=FFwriter, fps=60,
-                  extra_args=["-vcodec", "libx264"])
+
+# The following rather ugly code is for initial benchmarking and making videos
+
+# const collector = main(20_000, 1f-4)
+
+# using PyCall
+# using PyPlot
+# const animation = pyimport("matplotlib.animation")
+
+# const fig = figure(figsize=(100, 200))
+# const ax = gca()
+# ax[:set_xticks]([])
+# ax[:set_yticks]([])
+
+# const im = imshow(collector.result[:, :, 1] ./ maximum(collector.result[:, :, 1]),
+#                   interpolation="none")
+
+# # initialization function: plot the background of each frame
+# plot_init() = plot_animate(0)
+
+# # animation function.  This is called sequentially
+# function plot_animate(i)
+#     data = log1p(collector.result[:, :, i + 1])
+#     im[:set_data](data ./ maximum(data))
+#     (im,)
+# end
+
+# @time anim = animation[:FuncAnimation](fig, plot_animate, init_func=plot_init,
+#                                        frames=size(collector.result, 3),
+#                                        interval=16)
+# # Somehow the saver only saves the part of the animation shown on the screen...
+# show()
+# FFwriter = animation[:FFMpegWriter](fps=60)
+# @time anim[:save]("pierce.mp4", writer=FFwriter, fps=60,
+#                   extra_args=["-vcodec", "libx264"])
