@@ -219,9 +219,31 @@ function Base.call{N}(c::FramesCollector{N}, buff, idx)
     nothing
 end
 
+immutable PointsCollector{N}
+    point_cords::NTuple{N,NTuple{2,Int}}
+    point_vals::NTuple{N,Vector{Float32}}
+    @generated function PointsCollector(nsteps, point_cords)
+        quote
+            point_vals = ($([:(Vector{Float32}(nsteps)) for i in 1:N]...),)
+            $(Expr(:new, PointsCollector{N}, :point_cords, :point_vals))
+        end
+    end
+end
+
+PointsCollector{N}(nsteps, point_cords::NTuple{N,NTuple{2,Int}}) =
+    PointsCollector{N}(nsteps, point_cords)
+
+function Base.call{N}(c::PointsCollector{N}, buff, idx)
+    @inbounds for i in 1:N
+        c.point_vals[i][idx] = buff[c.point_cords[i]...]
+    end
+    nothing
+end
+
 function main(nstep, Δt)
+    collector = PointsCollector(nstep, ((10, 167), (35, 73), (67, 115)))
     # collector = DummyCollector()
-    collector = FullCollector(map_data, nstep, 5)
+    # collector = FullCollector(map_data, nstep, 5)
     # collector = FramesCollector(map_data, (Int(0.015 ÷ Δt) + 1,
     #                                        Int(0.105 ÷ Δt) + 1,
     #                                        Int(0.505 ÷ Δt) + 1,
@@ -231,7 +253,32 @@ function main(nstep, Δt)
                          3.43f4, Δt, 36.6f0, nstep, collector)
     collector
 end
-# const collector = main(20_000, 1f-4)
+
+const nstep = 20_000
+const Δt = 1f-4
+
+const collector = main(nstep, Δt)
+using PyPlot
+
+function plot_n_print_point(coord, vals)
+    plot(linspace(0, (nstep - 1) * Δt, nstep), vals, label="$coord")
+    idx = -1
+    @inbounds for i in 1:length(vals)
+        if abs(vals[i]) > 1e-3
+            idx = i
+            break
+        end
+    end
+    println("Heard at $coord at $(Δt * idx)")
+end
+
+plot_n_print_point((10, 167), collector.point_vals[1])
+plot_n_print_point((35, 73), collector.point_vals[2])
+plot_n_print_point((67, 115), collector.point_vals[3])
+legend()
+grid()
+savefig("pierce_points.png")
+show()
 
 # using PyPlot
 # figure()
@@ -253,8 +300,6 @@ end
 # show()
 
 # The following rather ugly code is for initial benchmarking and making videos
-
-# const collector = main(20_000, 1f-4)
 
 # using PyCall
 # using PyPlot
