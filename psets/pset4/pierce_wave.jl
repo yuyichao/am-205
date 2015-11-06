@@ -45,10 +45,10 @@ end
 Base.call(::DummyCollector, buff, idx) = nothing
 
 immutable FullCollector
-    result::Array{Float32,3}
+    result::Array{Float32,4}
     skip::Int
     FullCollector(map_data, nsteps, skip=1) =
-        new(Array{Float32}(size(map_data)...,
+        new(Array{Float32}(size(map_data)..., 3,
                            nsteps ÷ skip), skip)
 end
 
@@ -56,10 +56,27 @@ function Base.call(c::FullCollector, buff, idx)
     (idx - 1) % c.skip != 0 && return
     idx = (idx - 1) ÷ c.skip + 1
     res = c.result
-    @assert idx <= size(res, 3)
+    @assert idx <= size(res, 4)
+    vmax = max(-minimum(buff), maximum(buff))
     @inbounds for j in 1:size(res, 2)
-        @simd for i in 1:size(res, 1)
-            res[i, j, idx] = abs2(buff[i, j])
+        for i in 1:size(res, 1)
+            px_t = map_data[i, j]
+            if px_t != 0
+                v = buff[i, j] / vmax
+                v = flipsign(v, abs(v)^0.05f0)
+                v = (v + 1) / 2
+                res[i, j, 1, idx] = color_map_r(v)
+                res[i, j, 2, idx] = color_map_g(v)
+                res[i, j, 3, idx] = color_map_b(v)
+            elseif orig_map[i, j] != 0
+                res[i, j, 1, idx] = 0
+                res[i, j, 2, idx] = 0
+                res[i, j, 3, idx] = 0
+            else
+                res[i, j, 1, idx] = 1
+                res[i, j, 2, idx] = 1
+                res[i, j, 3, idx] = 1
+            end
         end
     end
     nothing
@@ -204,36 +221,36 @@ end
 
 function main(nstep, Δt)
     # collector = DummyCollector()
-    # collector = FullCollector(map_data, nstep, 20)
-    collector = FramesCollector(map_data, (Int(0.015 ÷ Δt) + 1,
-                                           Int(0.105 ÷ Δt) + 1,
-                                           Int(0.505 ÷ Δt) + 1,
-                                           Int(1.005 ÷ Δt) + 1))
+    collector = FullCollector(map_data, nstep, 5)
+    # collector = FramesCollector(map_data, (Int(0.015 ÷ Δt) + 1,
+    #                                        Int(0.105 ÷ Δt) + 1,
+    #                                        Int(0.505 ÷ Δt) + 1,
+    #                                        Int(1.005 ÷ Δt) + 1))
     @time propagate_wave(map_data, ZeroInitializer(),
                          SinDrive(10f0, 100f0π, 58:61, 16:19),
                          3.43f4, Δt, 36.6f0, nstep, collector)
     collector
 end
-const collector = main(20_000, 1f-4)
+# const collector = main(20_000, 1f-4)
 
-using PyPlot
-figure()
-imshow(collector.frames[1], interpolation="none")
-title("0.015s")
-savefig("pierce_015")
-figure()
-imshow(collector.frames[2], interpolation="none")
-title("0.105s")
-savefig("pierce_105")
-figure()
-imshow(collector.frames[3], interpolation="none")
-title("0.505s")
-savefig("pierce_505")
-figure()
-imshow(collector.frames[4], interpolation="none")
-title("1.005s")
-savefig("pierce_1005")
-show()
+# using PyPlot
+# figure()
+# imshow(collector.frames[1], interpolation="none")
+# title("0.015s")
+# savefig("pierce_015")
+# figure()
+# imshow(collector.frames[2], interpolation="none")
+# title("0.105s")
+# savefig("pierce_105")
+# figure()
+# imshow(collector.frames[3], interpolation="none")
+# title("0.505s")
+# savefig("pierce_505")
+# figure()
+# imshow(collector.frames[4], interpolation="none")
+# title("1.005s")
+# savefig("pierce_1005")
+# show()
 
 # The following rather ugly code is for initial benchmarking and making videos
 
@@ -248,21 +265,19 @@ show()
 # ax[:set_xticks]([])
 # ax[:set_yticks]([])
 
-# const im = imshow(collector.result[:, :, 1] ./ maximum(collector.result[:, :, 1]),
-#                   interpolation="none")
+# const im = imshow(collector.result[:, :, :, 1], interpolation="none")
 
 # # initialization function: plot the background of each frame
 # plot_init() = plot_animate(0)
 
 # # animation function.  This is called sequentially
 # function plot_animate(i)
-#     data = log1p(collector.result[:, :, i + 1])
-#     im[:set_data](data ./ maximum(data))
+#     im[:set_data](collector.result[:, :, :, i + 1])
 #     (im,)
 # end
 
 # @time anim = animation[:FuncAnimation](fig, plot_animate, init_func=plot_init,
-#                                        frames=size(collector.result, 3),
+#                                        frames=size(collector.result, 4),
 #                                        interval=16)
 # # Somehow the saver only saves the part of the animation shown on the screen...
 # show()
