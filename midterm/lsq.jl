@@ -30,3 +30,53 @@ function fit_F(x::AbstractMatrix, r::AbstractMatrix)
     [fc[1] fc[2]
      fc[4] fc[5]], [fc[3], fc[6]]
 end
+
+function fit_Fc(data::AbstractMatrix)
+    # Calculate F_c, plus many random stuff the problem is asked for...
+    @assert size(data, 2) == 4
+    len = size(data, 1)
+
+    # get mean positions
+    sum_x = sum_y = sum_r = sum_s = zero(eltype(data))
+    @inbounds @simd for i in 1:len
+        sum_x += data[i, 1]
+        sum_y += data[i, 2]
+        sum_r += data[i, 3]
+        sum_s += data[i, 4]
+    end
+    avg_x = sum_x / len
+    avg_y = sum_y / len
+    avg_r = sum_r / len
+    avg_s = sum_s / len
+
+    A = similar(data)
+    @inbounds @simd for i in 1:len
+        A[i, 1] = data[i, 1] - avg_x
+        A[i, 2] = data[i, 2] - avg_y
+        A[i, 3] = data[i, 3] - avg_r
+        A[i, 4] = data[i, 4] - avg_s
+    end
+
+    svd_res = svdfact(A)
+    # This is not the official API and might break at any time
+    U = svd_res.U
+    S = svd_res.S
+    Vt = svd_res.Vt
+
+    # Not super efficient and assume S is ordered
+    A′ = U * diagm([S[1], S[2], 0, 0]) * Vt
+
+    E1 = zero(eltype(data))
+    @inbounds @simd for i in 1:len
+        E1 += (abs2(A′[i, 1] - A[i, 1]) + abs2(A′[i, 2] - A[i, 2]) +
+               abs2(A′[i, 3] - A[i, 3]) + abs2(A′[i, 4] - A[i, 4]))
+    end
+    E2 = abs2(S[3]) + abs2(S[4])
+    @assert E1 ≈ E2
+
+    x′ = sub(A′, (:, 1:2))
+    r′ = sub(A′, (:, 3:4))
+    # Reuse the function above since why not....
+    F_c, c_c = fit_F(x′, r′)
+    F_c, E1
+end
