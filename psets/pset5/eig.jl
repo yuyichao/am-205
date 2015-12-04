@@ -42,3 +42,22 @@ function plot_eigs{T}(V, xs::Range{T}, Ds, Vecs)
     grid()
     legend(loc="center left", bbox_to_anchor=(1, 0.5))
 end
+
+function int_region{T}(Vecs, xs::Range{T}, xmin, xmax)
+    idxmin = max(1, round(Int, (xmin - first(xs)) / step(xs)))
+    idxmax = min(length(xs), round(Int, (xmax - first(xs)) / step(xs)))
+    if (idxmax - idxmin) % 2 != 1
+        idxmax -= 1
+    end
+
+    ints = Vector{T}(size(Vecs, 2))
+
+    @inbounds for i in 1:length(ints)
+        int_v = Vecs[idxmin, i] + Vecs[idxmax, i]
+        @simd for j in (idxmin + 1):(idxmax - 1)
+            int_v = muladd(abs2(Vecs[j, i]), ifelse(j & 0x1 == 0, 4, 2), int_v)
+        end
+        ints[i] = int_v / 3
+    end
+    ints
+end
