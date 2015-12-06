@@ -38,6 +38,9 @@ let
     @test tset[1] == (1, 2, 3)
     @test pset[v3] == 3
     @test pset[3] == v3
+
+    delete!(tset, (v1, v2, v3))
+    @test_throws KeyError tset[(v1, v2, v3)]
 end
 
 end

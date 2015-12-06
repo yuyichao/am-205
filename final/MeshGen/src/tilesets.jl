@@ -71,13 +71,19 @@ end
 
 immutable TileSet{Ndim,V<:Vec}
     pts::PointSet{V}
-    tiles::Vector{NTuple{Ndim,Int}}
+    cnt::Base.RefValue{Int}
+    tiles::Dict{Int,NTuple{Ndim,Int}}
     idxs::Dict{NTuple{Ndim,Int},Int}
-    TileSet(pts::PointSet{V}) = new(pts, NTuple{Ndim,Int}[],
+    TileSet(pts::PointSet{V}) = new(pts, Ref(0), Dict{Int,NTuple{Ndim,Int}}(),
                                     Dict{NTuple{Ndim,Int},Int}())
 end
 Base.call{Ndim,V}(::Type{TileSet{Ndim}}, pts::PointSet{V}) =
     TileSet{Ndim,V}(pts)
+function Base.empty!(s::TileSet)
+    empty!(s.tiles)
+    empty!(s.idxs)
+end
+
 @generated function Base.getindex{Ndim,V}(s::TileSet{Ndim,V},
                                           tile::NTuple{Ndim,V})
     quote
@@ -88,14 +94,37 @@ end
 Base.getindex{Ndim,V}(s::TileSet{Ndim,V}, tile_idxs::NTuple{Ndim,Int}) =
     s.idxs[tuple_sort(tile_idxs)]
 Base.getindex{Ndim,V}(s::TileSet{Ndim,V}, i::Int) = s.tiles[i]
+
+@generated function Base.delete!{Ndim,V}(s::TileSet{Ndim,V},
+                                         tile::NTuple{Ndim,V})
+    quote
+        tile_idxs = ($([:(s.pts[tile[$i]]) for i in 1:Ndim]...),)
+        delete!(s, tile_idxs)
+    end
+end
+function Base.delete!{Ndim,V}(s::TileSet{Ndim,V}, tile_idxs::NTuple{Ndim,Int})
+    tile_idxs = tuple_sort(tile_idxs)
+    tile_idxs in keys(s.idxs) || return
+    idx = pop!(s.idxs, tile_idxs)
+    delete!(s.tiles, idx)
+    return
+end
+function Base.delete!{Ndim,V}(s::TileSet{Ndim,V}, i::Int)
+    i in keys(s.tiles) || return
+    tile_idx = pop!(s.tiles, i)
+    delete!(s.idxs, tile_idx)
+    return
+end
+
 @generated function Base.push!{Ndim,V}(s::TileSet{Ndim,V},
                                        tile::NTuple{Ndim,V})
     quote
         tile_idxs = tuple_sort(($([:(push!(s.pts, tile[$i]))
                                    for i in 1:Ndim]...),))
         tile_idxs in keys(s.idxs) && return s.idxs[tile_idxs]
-        push!(s.tiles, tile_idxs)
-        idx = length(s.tiles)
+        idx = s.cnt[] + 1
+        s.cnt[] = idx
+        s.tiles[idx] = tile_idxs
         s.idxs[tile_idxs] = idx
         idx
     end
