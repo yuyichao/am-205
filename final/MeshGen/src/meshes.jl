@@ -723,9 +723,16 @@ function mesh{V}(model::Abstract2D{V})
         #     1. If we hit an edge, truncate our step and use the point on the
         #         edge.
         if sec_new != section
-            handle_next_boundary(model, ws, pset, mesh, p1, p2, p_new, step,
-                                 sec_p1, sec_p2, section, sec_new)
-            continue
+            if abs(p_new - pmid) > 0.1 * step
+                handle_next_boundary(model, ws, pset, mesh, p1, p2, p_new, step,
+                                     sec_p1, sec_p2, section, sec_new)
+                continue
+            elseif sec_new == -1
+                continue
+            end
+            p_new, section = get_next_point(model, pmid,
+                                            step * oftype(step, √(2)) * dir,
+                                            section, false)
         end
         #     2. Otherwise, use the normal size
         handle_next_empty(model, ws, pset, mesh, p1, p2, p_new, section)
