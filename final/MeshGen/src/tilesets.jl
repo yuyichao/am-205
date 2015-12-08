@@ -121,6 +121,13 @@ end
     quote
         tile_idxs = tuple_sort(($([:(push!(s.pts, tile[$i]))
                                    for i in 1:Ndim]...),))
+        push!(s, tile_idxs)
+    end
+end
+@generated function Base.push!{Ndim,V}(s::TileSet{Ndim,V},
+                                       tile_idxs::NTuple{Ndim,Int})
+    quote
+        tile_idxs = tuple_sort(tile_idxs)
         tile_idxs in keys(s.idxs) && return s.idxs[tile_idxs]
         idx = s.cnt[] + 1
         s.cnt[] = idx
