@@ -461,6 +461,34 @@ function check_neighbers(model, ws, pset, mesh, p1, p2, dir, section)
     return false
 end
 
+function check_free_2x(model, ws, pset, mesh, p1, p2, step, dir, section)
+    pmid = (p1 + p2) / 2
+    p_new, next_sec = get_next_point(model, pmid, step * dir * 2,
+                                     section, false)
+    # Give up if there's any crossing
+    isempty(check_crossing(model, (p1, p2), p_new, ws.edges)) || return false
+    if abs(p_new - pmid) >= step
+        p_new, next_sec = get_next_point(model, pmid, (p_new - pmid) / 2,
+                                         section, true)
+    else
+        p_new, next_sec = get_next_point(model, pmid,
+                                         (p_new - pmid) * oftype(step, 0.9),
+                                         section, true)
+    end
+    if abs(p_new - pmid) < 0.3 * step || next_sec != section
+        return false
+    end
+    push!(mesh, (p1, p2, p_new))
+    dir_p1, dir_p2 = calc_directions(p1, p2, p_new)
+    eidx_new1 = push!(ws, (p_new, p1), dir_p1)
+    eidx_new2 = push!(ws, (p_new, p2), dir_p2)
+
+    add_section!(ws, p_new, next_sec)
+    add_edge_section!(ws, eidx_new1, section)
+    add_edge_section!(ws, eidx_new2, section)
+    return true
+end
+
 function check_in_circle(model, ws, pset, mesh, p1, p2, step, dir, section)
     pmid = (p1 + p2) / 2
     dir = orthorg_vec(p1 - p2, dir)
@@ -653,6 +681,7 @@ function mesh{V}(model::Abstract2D{V})
         (sec_p1, sec_p2, section) = get_section(ws, p1, p2)
         delete!(ws, eidx)
         counter += 1
+        # debug only
         # counter >= 4000 && break
         section == -1 && continue
         step1 = get_step_size(model, p1, section)
@@ -672,12 +701,17 @@ function mesh{V}(model::Abstract2D{V})
         #     3. connecting them do not cross with other lines
         check_neighbers(model, ws, pset, mesh, p1, p2, dir, section) && continue
 
-        # 2. If none of the neighbering edges are good, check if there's any
-        #     unterminated edges nearby. If yes, find a point among them.
+        # 2. Check if
+        check_free_2x(model, ws, pset, mesh, p1, p2, step,
+                      dir, section) && continue
+
+        # 3. If none of the neighbering edges are good and there might be other
+        #     points nearby check more carefully if there's any unterminated
+        #     edges nearby. If yes, find a point among them.
         check_in_circle(model, ws, pset, mesh, p1, p2, step,
                         dir, section) && continue
 
-        # 3. Now we know there isn't any existing points nearby, we can
+        # 4. Now we know there isn't any existing points nearby, we can
         #     treat it as empty space. We first need to check if we will hit
         #     a boundary soon. Go twice as far (or some distance we know is
         #     not enough to hit any other existing edges)
