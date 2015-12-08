@@ -22,6 +22,8 @@ end
     Expr(:tuple, [:(s[vs[$i]]) for i in 1:N]...)
 @generated Base.getindex{N,V}(s::PointSet{V}, idxs::NTuple{N,Int}) =
     Expr(:tuple, [:(s[idxs[$i]]) for i in 1:N]...)
+Base.in{V<:Vec}(s::PointSet{V}, i::Int) = 1 <= i <= length(s.ary)
+Base.in{V<:Vec}(s::PointSet{V}, v::V) = v in keys(s.idxs)
 
 tuple_sort(t::Tuple{Int}) = t
 tuple_sort(t::NTuple{2,Int}) = t[1] > t[2] ? (t[2], t[1]) : t
@@ -94,6 +96,18 @@ end
 Base.getindex{Ndim,V}(s::TileSet{Ndim,V}, tile_idxs::NTuple{Ndim,Int}) =
     s.idxs[tuple_sort(tile_idxs)]
 Base.getindex{Ndim,V}(s::TileSet{Ndim,V}, i::Int) = s.tiles[i]
+
+Base.in{Ndim,V<:Vec}(s::TileSet{Ndim,V}, tile::Tuple{}) = error()
+@generated function Base.in{Ndim,V<:Vec}(s::TileSet{Ndim,V},
+                                         tile::NTuple{Ndim,V})
+    quote
+        tile_idxs = ($([:(s.pts[tile[$i]]) for i in 1:Ndim]...),)
+        tile_idxs in s
+    end
+end
+Base.in{Ndim,V<:Vec}(s::TileSet{Ndim,V}, tile_idxs::NTuple{Ndim,Int}) =
+    tuple_sort(tile_idxs) in keys(s.idxs)
+Base.in{Ndim,V<:Vec}(s::TileSet{Ndim,V}, i::Int) = i in keys(s.tiles)
 
 @generated function Base.delete!{Ndim,V}(s::TileSet{Ndim,V},
                                          tile::NTuple{Ndim,V})
