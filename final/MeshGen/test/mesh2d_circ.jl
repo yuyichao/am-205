@@ -129,27 +129,40 @@ end
 
 using PyPlot
 pset2 = ps2d.pts
+
 # figure()
-# for (idx, tile) in ps2d.tiles
-#     r1, r2, r3 = pset2[tile]
-#     plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-#          [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
+# for (idx, tile) in frontier.tiles
+#     r1, r2 = pset2[tile]
+#     plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], linewidth=0.5, "g-")
 # end
 # grid()
 # xlim([-1, 1])
 # ylim([-1, 1])
 # gca()[:set_aspect]("equal")
-# savefig("img/mesh2d_circ.png", bbox_inches="tight")
+# savefig("img/mesh2d_circ.png", bbox_inches="tight", dpi=1000)
 
 figure()
+xmin = -0.17
+xmax = -0.03
+ymin = 0.05
+ymax = 0.165
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
-    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], linewidth=0.5, "g-")
+    ewidth = 1
+    if (xmin < r1.r[1] < xmax && xmin < r2.r[1] < xmax &&
+        ymin < r1.r[2] < ymax && ymin < r2.r[2] < ymax)
+        ewidth = 5
+    end
+    if ((r1.r[1] < -0.14 && r1.r[2] < 0.06) ||
+        (r2.r[1] < -0.14 && r2.r[2] < 0.06))
+        ewidth = 1
+    end
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], linewidth=ewidth, "g-")
 end
 grid()
-xlim([-1, 1])
-ylim([-1, 1])
+xlim([xmin, xmax])
+ylim([ymin, ymax])
 gca()[:set_aspect]("equal")
-savefig("img/mesh2d_circ.png", bbox_inches="tight", dpi=1000)
+savefig("img/mesh2d_circ_opt.png", bbox_inches="tight", dpi=1000)
 
 # show()
