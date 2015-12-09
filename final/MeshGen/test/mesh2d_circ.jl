@@ -153,4 +153,5 @@ xlim([-0.25, -0.03])
 ylim([0.05, 0.17])
 gca()[:set_aspect]("equal")
 savefig("mesh2d_circ_opt.png", bbox_inches="tight", dpi=1000)
-show()
+
+# show()

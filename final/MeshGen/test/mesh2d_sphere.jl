@@ -10,7 +10,7 @@ Meshes.get_step_size{T}(m::SphereModel2D{T}, p::Vec{3,T}, section::Int) =
     T(0.15)
 
 function Meshes.get_init{T}(m::SphereModel2D{T})
-    Vec{3,T}(0, 0, -1), 0, (Vec{3,T}(1, 0, 0), Vec{3,T}(0, 1, 0))
+    Vec{3,T}(0, 0, -1), 0, (Vec{3,T}(0, 1, 0), Vec{3,T}(√(3) / 2, -0.5, 0))
 end
 
 function Meshes.get_next_point{T}(m::SphereModel2D{T}, p::Vec{3,T},
@@ -105,51 +105,60 @@ end
 using PyPlot
 
 pset2 = ps2d.pts
-figure()
-for (idx, tile) in ps2d.tiles
-    r1, r2, r3 = pset2[tile]
-    plot3D([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-           [r1.r[2], r2.r[2], r3.r[2], r1.r[2]],
-           [r1.r[3], r2.r[3], r3.r[3], r1.r[3]], "-")
-end
-grid()
-figure()
-for (idx, tile) in frontier.tiles
-    r1, r2 = pset2[tile]
-    plot3D([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], [r1.r[3], r2.r[3]], "b-")
-end
-grid()
+# figure()
+# for (idx, tile) in ps2d.tiles
+#     r1, r2, r3 = pset2[tile]
+#     plot3D([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
+#            [r1.r[2], r2.r[2], r3.r[2], r1.r[2]],
+#            [r1.r[3], r2.r[3], r3.r[3], r1.r[3]], "-")
+# end
+# grid()
+# figure()
+# for (idx, tile) in frontier.tiles
+#     r1, r2 = pset2[tile]
+#     plot3D([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], [r1.r[3], r2.r[3]], "b-")
+# end
+# grid()
 
-figure()
-for (idx, tile) in ps2d.tiles
-    r1, r2, r3 = pset2[tile]
-    (r1.r[3] >= 0 && r2.r[3] >= 0 && r3.r[3] >= 0) || continue
-    plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-         [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
-end
-grid()
-figure()
-for (idx, tile) in ps2d.tiles
-    r1, r2, r3 = pset2[tile]
-    (r1.r[3] < 0 || r2.r[3] < 0 && r3.r[3] < 0) || continue
-    plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-         [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
-end
-grid()
+# figure()
+# for (idx, tile) in ps2d.tiles
+#     r1, r2, r3 = pset2[tile]
+#     (r1.r[3] >= 0 && r2.r[3] >= 0 && r3.r[3] >= 0) || continue
+#     plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
+#          [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
+# end
+# grid()
+# figure()
+# for (idx, tile) in ps2d.tiles
+#     r1, r2, r3 = pset2[tile]
+#     (r1.r[3] < 0 || r2.r[3] < 0 && r3.r[3] < 0) || continue
+#     plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
+#          [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
+# end
+# grid()
 
 figure()
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
     (r1.r[3] >= 0 && r2.r[3] >= 0) || continue
-    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "b-")
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "g-")
 end
+xlim([-1, 1])
+ylim([-1, 1])
+gca()[:set_aspect]("equal")
 grid()
+savefig("mesh2d_sphere_back.png", bbox_inches="tight", dpi=1000)
+
 figure()
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
-    (r1.r[3] < 0 || r2.r[3] < 0) || continue
-    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "b-")
+    (r1.r[3] <= 0 && r2.r[3] <= 0) || continue
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "g-")
 end
+xlim([-1, 1])
+ylim([-1, 1])
+gca()[:set_aspect]("equal")
 grid()
+savefig("mesh2d_sphere_front.png", bbox_inches="tight", dpi=1000)
 
 show()
