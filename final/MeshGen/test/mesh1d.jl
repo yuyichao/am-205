@@ -12,7 +12,7 @@ end
 
 function Meshes.get_step_size{T}(model::CircleModel{T},
                                  p::Vec{2,T}, section::Int)
-    (p.r[2]^2 + T(0.1)) * model.scale * (1 + 2 * section)
+    (p.r[2]^2 + T(0.2)) * model.scale * (1 + 1.5 * section)
 end
 
 function Meshes.get_init{T}(model::CircleModel{T})
@@ -58,12 +58,15 @@ end
 
 ps = meshgen(CircleModel(0.1))
 
-# using PyPlot
-# pset = ps.pts
-# for (idx, tile) in ps.tiles
-#     r1, r2 = pset[tile]
-#     plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "bo-")
-# end
-# # plot(sin(ps), cos(ps), "o")
-# grid()
+using PyPlot
+pset = ps.pts
+for (idx, tile) in ps.tiles
+    r1, r2 = pset[tile]
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "g.-")
+end
+xlim([-1, 1])
+ylim([-1, 1])
+gca()[:set_aspect]("equal")
+grid()
+savefig("img/mesh1d.png", bbox_inches="tight", dpi=1000)
 # show()
