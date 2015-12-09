@@ -368,31 +368,6 @@ function normalized_dot(v1, v2)
     v1 * v2
 end
 
-# function recheck_crossing(model, p1, p2, new_p, fr, section)
-#     pset = fr.edges.pts
-#     pmid = (p1 + p2) / 2
-#     iscross = check_crossing(model, (p1, p2), new_p, fr.edges)
-#     for cr_tidx in iscross
-#         cr_pidx1, cr_pidx2 = fr.edges[cr_tidx]
-#         cr_p1 = pset[cr_pidx1]
-#         cr_p2 = pset[cr_pidx2]
-#         (cr_p1 == new_p || cr_p2 == new_p) && continue
-#         # There's another edge in between, shrink the vector and try again.
-#         step_scale = oftype(abs(pmid), 0.9)
-#         @label retry
-#         next_p, next_sec =
-#             get_next_point(model, pmid, (new_p - pmid) * step_scale,
-#                            section, true)
-#         iscross = check_crossing(model, (p1, p2), next_p, fr.edges)
-#         if isempty(iscross)
-#             step_scale = (step_scale + 1) / 2
-#             @goto retry
-#         end
-#         return iscross
-#     end
-#     Int[]
-# end
-
 function orthorg_vec(v1, v2)
     n1 = v1 / abs(v1)
     v2 - (n1 * v2) * n1
