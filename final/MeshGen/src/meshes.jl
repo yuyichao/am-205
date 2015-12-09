@@ -694,6 +694,14 @@ function mesh{V}(model::Abstract2D{V})
             step = oftype(step, dist_p12 / 3)
         end
 
+        pmid = (p1 + p2) / 2
+        p_new, sec_new = get_next_point(model, pmid,
+                                        step * oftype(step, √(2)) * dir,
+                                        section, true)
+        if sec_new == -1 && (p_new - pmid) * dir <= 0.1 * step
+            continue
+        end
+
         # 1. First check if the neighbering edges are good candidates, i.e.
         #
         #     1. on the correct side of the line
@@ -715,10 +723,6 @@ function mesh{V}(model::Abstract2D{V})
         #     treat it as empty space. We first need to check if we will hit
         #     a boundary soon. Go twice as far (or some distance we know is
         #     not enough to hit any other existing edges)
-        pmid = (p1 + p2) / 2
-        p_new, sec_new = get_next_point(model, pmid,
-                                        step * oftype(step, √(2)) * dir,
-                                        section, true)
         #
         #     1. If we hit an edge, truncate our step and use the point on the
         #         edge.
@@ -738,7 +742,135 @@ function mesh{V}(model::Abstract2D{V})
         handle_next_empty(model, ws, pset, mesh, p1, p2, p_new, section)
     end
 
-    mesh, ws.edges
+    optimize_mesh(model, mesh, ws.edges)
+end
+
+function reconnect_safe(ep1, ep2, mp1, mp2)
+    # Decide whether it's safe to swap the diagnal.
+    # It's safe if the angle between the current diagnal and all the edges
+    # are no larger than 90deg
+    (ep1 - ep2) * (ep1 - mp1) < 0 && return false
+    (ep1 - ep2) * (ep1 - mp2) < 0 && return false
+    (ep2 - ep1) * (ep2 - mp1) < 0 && return false
+    (ep2 - ep1) * (ep2 - mp2) < 0 && return false
+    return true
+end
+
+function trig_area(p1, p2, p3)
+    # Heron's Formula =)
+    a = abs(p1 - p2)
+    b = abs(p2 - p3)
+    c = abs(p3 - p1)
+    s = (a + b + c) / 2
+    √(s * (s - a) * (s - b) * (s - c))
+end
+
+function reconnect_diag(midx1, midx2, ep1, ep2, mesh, edges, pset)
+    mpidx1 = mesh[midx1]
+    mpidx2 = mesh[midx2]
+
+    mp1 = ep1
+    mp2 = ep1
+
+    # Find the other point in the mesh
+    for r in pset[mpidx1]
+        if r != ep1 && r != ep2
+            mp1 = r
+            break
+        end
+    end
+    for r in pset[mpidx2]
+        if r != ep1 && r != ep2
+            mp2 = r
+            break
+        end
+    end
+
+    @assert mp1 != ep1
+    @assert mp2 != ep1
+
+    reconnect_safe(ep1, ep2, mp1, mp2) || @goto no_change
+
+    a1 = trig_area(ep1, ep2, mp1)
+    a2 = trig_area(ep1, ep2, mp2)
+
+    a1_new = trig_area(mp1, mp2, ep1)
+    a2_new = trig_area(mp1, mp2, ep2)
+
+    a1_new * a2_new > (a1 * a2 * 1.3) && @goto do_swap
+    a1 * a2 > (a1_new * a2_new * 1.3) && @goto no_change
+
+    diag_l = abs(ep1 - ep2)
+    diag_l_new = abs(mp1 - mp2)
+
+    diag_l_new < diag_l * 0.99 && @goto do_swap
+
+    @label no_change
+    return mpidx1, mpidx2, ep1, ep2, false
+    @label do_swap
+    mp1_idx = pset[mp1]
+    mp2_idx = pset[mp2]
+    ep1_idx = pset[ep1]
+    ep2_idx = pset[ep2]
+    return ((ep1_idx, mp1_idx, mp2_idx), (ep2_idx, mp1_idx, mp2_idx),
+            mp1, mp2, true)
+end
+
+function e2m_add(e2m, midx, mps, edges, pset, removes=())
+    r1, r2, r3 = pset[mps]
+    eidx1 = edges[(r1, r2)]
+    eidx2 = edges[(r1, r3)]
+    eidx3 = edges[(r2, r3)]
+    push!(get!(e2m, eidx1, Set{Int}()), midx)
+    push!(get!(e2m, eidx2, Set{Int}()), midx)
+    push!(get!(e2m, eidx3, Set{Int}()), midx)
+    for old_mid in removes
+        delete!(e2m[eidx1], old_mid)
+        delete!(e2m[eidx2], old_mid)
+        delete!(e2m[eidx3], old_mid)
+    end
+end
+
+function optimize_mesh(model, mesh, edges)
+    pset = mesh.pts
+    e2m = Dict{Int,Set{Int}}()
+    for (midx, mps) in mesh.tiles
+        e2m_add(e2m, midx, mps, edges, pset)
+    end
+    for i in 1:100
+        eidxs = collect(keys(edges.tiles))
+        opt_count = 0
+        for eidx in eidxs
+            eidx in keys(e2m) || continue
+            ms = e2m[eidx]
+            length(ms) == 2 || continue
+
+            edg = edges.tiles[eidx]
+            ep1, ep2 = pset[edg]
+            midx1, midx2 = ms
+
+            m1_new, m2_new, ep1, ep2, changed = reconnect_diag(midx1, midx2,
+                                                               ep1, ep2,
+                                                               mesh, edges, pset)
+
+            if changed
+                opt_count += 1
+                delete!(mesh, midx1)
+                delete!(mesh, midx2)
+                delete!(edges, eidx)
+
+                midx1_new = push!(mesh, m1_new)
+                midx2_new = push!(mesh, m2_new)
+                eidx = push!(edges, (ep1, ep2))
+                # Fix e2m
+                e2m_add(e2m, midx1_new, m1_new, edges, pset, (midx1, midx2))
+                e2m_add(e2m, midx2_new, m2_new, edges, pset, (midx1, midx2))
+            end
+        end
+        opt_count == 0 && break
+        # println("optimized $opt_count edges")
+    end
+    mesh, edges
 end
 
 end
