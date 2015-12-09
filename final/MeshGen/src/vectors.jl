@@ -74,4 +74,11 @@ end
 end
 @inline abs(vec::Vec) = sqrt(abs2(vec))
 
+Base.cross(v1::Vec{2}, v2::Vec{2}) = v1.r[1] * v2.r[2] - v1.r[2] * v2.r[1]
+
+Base.cross(v1::Vec{3}, v2::Vec{3}) =
+    Vec(v1.r[2] * v2.r[3] - v1.r[3] * v2.r[2],
+        v1.r[3] * v2.r[1] - v1.r[1] * v2.r[3],
+        v1.r[1] * v2.r[2] - v1.r[2] * v2.r[1])
+
 end

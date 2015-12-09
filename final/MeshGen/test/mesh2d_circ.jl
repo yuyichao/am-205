@@ -50,10 +50,10 @@ function same_side_of(lp1::Vec{2}, lp2::Vec{2}, p1::Vec{2}, p2::Vec{2})
     lv = lp2 - lp1
     p11 = p1 - lp1
     p21 = p2 - lp1
-    # which side is p1 on calculate lv × p11
-    side1 = lv.r[1] * p11.r[2] - lv.r[2] * p11.r[1]
-    # which side is p2 on calculate lv × p21
-    side2 = lv.r[1] * p21.r[2] - lv.r[2] * p21.r[1]
+    # which side is p1 on
+    side1 = lv × p11
+    # which side is p2 on
+    side2 = lv × p21
     side1 * side2 > 0
 end
 
