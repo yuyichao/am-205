@@ -147,7 +147,7 @@ xlim([-1, 1])
 ylim([-1, 1])
 gca()[:set_aspect]("equal")
 grid()
-savefig("mesh2d_sphere_back.png", bbox_inches="tight", dpi=1000)
+savefig("img/mesh2d_sphere_back.png", bbox_inches="tight", dpi=1000)
 
 figure()
 for (idx, tile) in frontier.tiles
@@ -159,6 +159,6 @@ xlim([-1, 1])
 ylim([-1, 1])
 gca()[:set_aspect]("equal")
 grid()
-savefig("mesh2d_sphere_front.png", bbox_inches="tight", dpi=1000)
+savefig("img/mesh2d_sphere_front.png", bbox_inches="tight", dpi=1000)
 
 # show()

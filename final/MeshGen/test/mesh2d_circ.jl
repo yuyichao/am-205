@@ -139,7 +139,7 @@ pset2 = ps2d.pts
 # xlim([-1, 1])
 # ylim([-1, 1])
 # gca()[:set_aspect]("equal")
-# savefig("mesh2d_circ.png", bbox_inches="tight")
+# savefig("img/mesh2d_circ.png", bbox_inches="tight")
 
 figure()
 for (idx, tile) in frontier.tiles
@@ -150,6 +150,6 @@ grid()
 xlim([-1, 1])
 ylim([-1, 1])
 gca()[:set_aspect]("equal")
-savefig("mesh2d_circ.png", bbox_inches="tight", dpi=1000)
+savefig("img/mesh2d_circ.png", bbox_inches="tight", dpi=1000)
 
 # show()
