@@ -682,7 +682,7 @@ function mesh{V}(model::Abstract2D{V})
         delete!(ws, eidx)
         counter += 1
         # debug only
-        # counter >= 4000 && break
+        # counter >= 360 && break
         section == -1 && continue
         step1 = get_step_size(model, p1, section)
         step2 = get_step_size(model, p2, section)
@@ -723,7 +723,7 @@ function mesh{V}(model::Abstract2D{V})
         #     1. If we hit an edge, truncate our step and use the point on the
         #         edge.
         if sec_new != section
-            if abs(p_new - pmid) > 0.1 * step
+            if (p_new - pmid) * dir > 0.2 * step
                 handle_next_boundary(model, ws, pset, mesh, p1, p2, p_new, step,
                                      sec_p1, sec_p2, section, sec_new)
                 continue

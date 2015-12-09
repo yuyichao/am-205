@@ -70,26 +70,45 @@ ps = mesh(CircleModel(0.1))
 # grid()
 # show()
 
-immutable CircleModel2D{T} <: Meshes.Abstract2D{Vec{2,T}}
+immutable CircleWithHoleModel2D{T} <: Meshes.Abstract2D{Vec{2,T}}
+    hole_c::Vec{2,T}
+    hole_r::T
 end
 
-function Meshes.get_section{T}(::CircleModel2D{T}, p::Vec{2,T})
-    abs(p) >= 1 ? -1 : 0
+function Meshes.get_section{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T})
+    if abs(p) >= 1
+        return -1
+    end
+    if abs(p - m.hole_c) <= m.hole_r
+        return -1
+    end
+    return 0
 end
-function Meshes.get_step_size{T}(::CircleModel2D{T}, p::Vec{2,T}, section::Int)
-    T(0.05) / T(abs(p) + 0.3)
+function Meshes.get_step_size{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T},
+                                 section::Int)
+    density = abs(p) + 1 / abs(p - m.hole_c) + 0.3
+    T(0.05) / T(density)
 end
 
-function Meshes.get_init{T}(::CircleModel2D{T})
-    Vec{2,T}(0, 0), 0, (Vec{2,T}(1, 0), Vec{2,T}(0.5, √(3) / 2))
+function Meshes.get_init{T}(m::CircleWithHoleModel2D{T})
+    init_p = m.hole_c / abs(m.hole_c) * (abs(m.hole_c) + m.hole_r + 1) / 2
+    init_p, 0, (Vec{2,T}(1, 0), Vec{2,T}(0.5, √(3) / 2))
 end
 
-function Meshes.get_next_point{T}(::CircleModel2D{T}, p::Vec{2,T},
+function Meshes.get_next_point{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T},
                                   step::Vec{2,T}, section::Int, clip::Bool)
     next_p = p + step
-    section = abs(next_p) >= 1 ? -1 : 0
-    if section == -1 && clip
-        next_p /= abs(next_p)
+    if abs(next_p) >= 1
+        section = -1
+        clip && (next_p /= abs(next_p))
+    elseif abs(next_p - m.hole_c) <= m.hole_r
+        section = -1
+        if clip
+            hole_p = next_p - m.hole_c
+            next_p = m.hole_c + hole_p / abs(hole_p) * m.hole_r
+        end
+    else
+        section = 0
     end
     next_p, section
 end
@@ -125,7 +144,8 @@ function point_in_angle(common, p1, p2, ptest)
     acos(v1 * vtest) + acos(v2 * vtest) <= π
 end
 
-function Meshes.check_crossing{T}(::CircleModel2D{T}, ps::NTuple{2,Vec{2,T}},
+function Meshes.check_crossing{T}(m::CircleWithHoleModel2D{T},
+                                  ps::NTuple{2,Vec{2,T}},
                                   p2::Vec{2,T}, tileset::TileSet{2,Vec{2,T}})
     crossing = Int[]
     pset = tileset.pts
@@ -171,7 +191,9 @@ function Meshes.check_crossing{T}(::CircleModel2D{T}, ps::NTuple{2,Vec{2,T}},
     crossing
 end
 
-ps2d, frontier = mesh(CircleModel2D{Float64}())
+
+@time ps2d, frontier =
+    mesh(CircleWithHoleModel2D{Float64}(Vec{2,Float64}(0.0, 0.6), 0.2))
 
 using PyPlot
 pset2 = ps2d.pts
@@ -179,13 +201,13 @@ figure()
 for (idx, tile) in ps2d.tiles
     r1, r2, r3 = pset2[tile]
     plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-         [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "o-")
+         [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
 end
 grid()
 figure()
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
-    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "bo-")
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "b-")
     # if idx in ignored
     #     plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "go-")
     # else
