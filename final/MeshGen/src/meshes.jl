@@ -235,8 +235,10 @@ immutable WorkSet2D{V}
     dirs::Dict{Int,V} # Directions
     psect::Dict{Int,Set{Int}} # Sections of points
     esect::Dict{Int,Int} # Sections of points
+    p2e::Dict{Int,Set{Int}} # Map from point to edges
     WorkSet2D(pset) = new(TileSet{2}(pset), Set{Int}(), Dict{Int,V}(),
-                          Dict{Int,Set{Int}}(), Dict{NTuple{2,Int},Int}())
+                          Dict{Int,Set{Int}}(), Dict{NTuple{2,Int},Int}(),
+                          Dict{Int,Set{Int}}())
 end
 
 function get_psects!{V}(ws::WorkSet2D{V}, pidx::Int)
@@ -293,6 +295,9 @@ function Base.push!{V}(ws::WorkSet2D{V}, pidxs::NTuple{2,Int}, dir::V)
     eidx = push!(ws.edges, pidxs)
     push!(ws.fr, eidx)
     ws.dirs[eidx] = dir
+    for pidx in pidxs
+        push!(get!(ws.p2e, pidx, Set{Int}()), eidx)
+    end
     eidx
 end
 Base.push!{V}(ws::WorkSet2D{V}, ps::NTuple{2,V}, dir::V) =
@@ -392,7 +397,10 @@ function distance_to_segment(v1, v2)
 end
 
 function check_neighbers(model, ws, pset, mesh, p1, p2, dir, section)
-    for (eidx, etile) in ws.edges.tiles
+    pidx1 = pset[p1]
+    pidx2 = pset[p2]
+    for eidx in union(ws.p2e[pidx1], ws.p2e[pidx2])
+        etile = ws.edges.tiles[eidx]
         ep1, ep2 = pset[etile]
         ((ep1 == p1 && ep2 == p2) || (ep1 == p2 && ep2 == p1)) && continue
         if ep1 == p1
@@ -471,6 +479,7 @@ function check_in_circle(model, ws, pset, mesh, p1, p2, step, dir, section)
     po = pmid + step * dir * oftype(step, 0.8)
     ro = abs(po - p1)
     remset = Set{Int}()
+    # FIXME
     for (eidx, etile) in ws.edges.tiles
         ep1, ep2 = pset[etile]
         ((ep1 == p1 && ep2 == p2) || (ep1 == p2 && ep2 == p1)) && continue

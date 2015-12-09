@@ -87,7 +87,7 @@ end
 function Meshes.get_step_size{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T},
                                  section::Int)
     density = abs(p) + 1 / abs(p - m.hole_c) + 0.3
-    T(0.1) / T(density)
+    T(0.05) / T(density)
 end
 
 function Meshes.get_init{T}(m::CircleWithHoleModel2D{T})
