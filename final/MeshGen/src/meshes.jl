@@ -472,6 +472,8 @@ function check_free_2x(model, ws, pset, mesh, p1, p2, step, dir, section)
     return true
 end
 
+# const do_abort = Ref(false)
+
 function check_in_circle(model, ws, pset, mesh, p1, p2, step, dir, section)
     pmid = (p1 + p2) / 2
     dir = orthorg_vec(p1 - p2, dir)
@@ -603,6 +605,8 @@ function check_in_circle(model, ws, pset, mesh, p1, p2, step, dir, section)
         empty!(remset2)
         threshold = new_thresh
     end
+    # do_abort[] = true
+    return true
     @assert false
     return false
 end
@@ -667,6 +671,7 @@ function meshgen{V}(model::Abstract2D{V})
         counter += 1
         # debug only
         # counter >= 360 && break
+        # do_abort[] && break
         section == -1 && continue
         step1 = get_step_size(model, p1, section)
         step2 = get_step_size(model, p2, section)
