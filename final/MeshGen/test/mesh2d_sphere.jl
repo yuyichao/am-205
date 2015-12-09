@@ -161,4 +161,4 @@ gca()[:set_aspect]("equal")
 grid()
 savefig("mesh2d_sphere_front.png", bbox_inches="tight", dpi=1000)
 
-show()
+# show()
