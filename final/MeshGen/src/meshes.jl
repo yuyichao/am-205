@@ -96,7 +96,7 @@ function init_mesh{V}(model::Abstract1D{V}, mesh, frontier, dirs, sections)
     nothing
 end
 
-function mesh{V}(model::Abstract1D{V})
+function meshgen{V}(model::Abstract1D{V})
     pset = PointSet{V}()
     mesh = TileSet{2}(pset)
     frontier = TileSet{1}(pset)
@@ -669,7 +669,7 @@ function handle_next_empty(model, ws, pset, mesh, p1, p2, p_new, section)
     add_edge_section!(ws, eidx_new2, section)
 end
 
-function mesh{V}(model::Abstract2D{V})
+function meshgen{V}(model::Abstract2D{V})
     pset = PointSet{V}()
     mesh = TileSet{3}(pset)
     ws = WorkSet2D{V}(pset)

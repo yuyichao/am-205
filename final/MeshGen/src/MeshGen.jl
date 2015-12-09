@@ -9,6 +9,6 @@ include("tilesets.jl")
 import .TileSets: PointSet, TileSet
 
 include("meshes.jl")
-import .Meshes: mesh
+import .Meshes: meshgen
 
 end

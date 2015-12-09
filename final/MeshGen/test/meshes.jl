@@ -2,7 +2,7 @@
 
 module TestMeshes
 
-import MeshGen: Vec, TileSet, Meshes, mesh
+import MeshGen: Vec, TileSet, Meshes, meshgen
 
 immutable CircleModel{T} <: Meshes.Abstract1D{Vec{2,T}}
     scale::T
@@ -58,7 +58,7 @@ function Meshes.check_crossing{T}(model::CircleModel{T}, p1::Vec{2,T},
     return Nullable{Tuple{Int,Vec{2,T}}}()
 end
 
-ps = mesh(CircleModel(0.1))
+ps = meshgen(CircleModel(0.1))
 
 # using PyPlot
 # pset = ps.pts
@@ -193,7 +193,7 @@ end
 
 
 @time ps2d, frontier =
-    mesh(CircleWithHoleModel2D{Float64}(Vec{2,Float64}(0.0, 0.6), 0.2))
+    meshgen(CircleWithHoleModel2D{Float64}(Vec{2,Float64}(0.0, 0.6), 0.2))
 
 using PyPlot
 pset2 = ps2d.pts
