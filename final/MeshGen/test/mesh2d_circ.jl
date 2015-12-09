@@ -18,8 +18,8 @@ function Meshes.get_section{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T})
 end
 function Meshes.get_step_size{T}(m::CircleWithHoleModel2D{T}, p::Vec{2,T},
                                  section::Int)
-    density = abs(p) + 1 / abs(p - m.hole_c) + 0.3
-    T(0.05) / T(density)
+    density = abs(p) + sqrt(m.hole_r / abs(p - m.hole_c)^3) + 0.3
+    T(0.1) / T(density)
 end
 
 function Meshes.get_init{T}(m::CircleWithHoleModel2D{T})
@@ -129,21 +129,27 @@ end
 
 using PyPlot
 pset2 = ps2d.pts
-figure()
-for (idx, tile) in ps2d.tiles
-    r1, r2, r3 = pset2[tile]
-    plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
-         [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
-end
-grid()
+# figure()
+# for (idx, tile) in ps2d.tiles
+#     r1, r2, r3 = pset2[tile]
+#     plot([r1.r[1], r2.r[1], r3.r[1], r1.r[1]],
+#          [r1.r[2], r2.r[2], r3.r[2], r1.r[2]], "-")
+# end
+# grid()
+# xlim([-1, 1])
+# ylim([-1, 1])
+# gca()[:set_aspect]("equal")
+# savefig("mesh2d_circ.png", bbox_inches="tight")
+
 figure()
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
-    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "b-")
-    # if idx in ignored
-    #     plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], "go-")
-    # else
-    # end
+    ewidth = sqrt(abs(r1 - r2)) * 2
+    plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], linewidth=ewidth, "g-")
 end
 grid()
-show()
+xlim([-1, 1])
+ylim([-1, 1])
+gca()[:set_aspect]("equal")
+savefig("mesh2d_circ.png", bbox_inches="tight", dpi=1000)
+# show()
