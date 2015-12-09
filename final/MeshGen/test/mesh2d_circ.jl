@@ -144,12 +144,13 @@ pset2 = ps2d.pts
 figure()
 for (idx, tile) in frontier.tiles
     r1, r2 = pset2[tile]
-    ewidth = sqrt(abs(r1 - r2)) * 2
+    # ewidth = sqrt(abs(r1 - r2)) * 2
+    ewidth = 1
     plot([r1.r[1], r2.r[1]], [r1.r[2], r2.r[2]], linewidth=ewidth, "g-")
 end
 grid()
-xlim([-1, 1])
-ylim([-1, 1])
+xlim([-0.25, -0.03])
+ylim([0.05, 0.17])
 gca()[:set_aspect]("equal")
-savefig("mesh2d_circ.png", bbox_inches="tight", dpi=1000)
-# show()
+savefig("mesh2d_circ_opt.png", bbox_inches="tight", dpi=1000)
+show()

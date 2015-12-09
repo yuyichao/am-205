@@ -732,6 +732,7 @@ function meshgen{V}(model::Abstract2D{V})
     end
 
     optimize_mesh(model, mesh, ws.edges)
+    return mesh, ws.edges
 end
 
 function reconnect_safe(ep1, ep2, mp1, mp2)
