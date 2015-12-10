@@ -141,16 +141,62 @@ ones.
                         point2::V, tileset::TileSet{N,V})
 \end{lstlisting}
 
-With a reasonably small grid size, these informations can be determined from
-only local informations of the model and are therefore easy to generate.
+With a reasonably small grid size and slow variation of space parameters, these
+informations can be determined from only local informations of the model and
+are therefore easy to generate.
 
 \section{Implementation}
 
+In this section, we describe our implementation of the algorithm. We do not
+cover all the technical detail about the implementation, which can be more
+clearly explained by the code itself. Instead, we will describe the important
+steps in the algorithm and a breif outline how they are implemented.\\
+
 Since our abstraction of the model only contain local information of the space,
 the algorithm we use to generate the mesh is naturally an iterative method
-that covers the whole space by locally extending the current mesh.
+that covers the whole space by locally extending the current mesh. In each
+iteration, we pick an edge/surface we previously generateed and try to construct
+the next one out of it. When generating it, in additional to making sure we are
+using the right grid size, we also need to make sure that it is within the valid
+region and does not cross with existing ones. In order to do this, we use the
+following steps,
+
+\begin{itemize}
+\item Check if the current point is close enough to the boundary.
+
+  If it is closer than a certain threshold ($10\%$ of the grid size), we
+  simply treat it as a point on the boundary and do not extend it.
+
+\item Determine if we should simply combine with a neighbering edge.
+
+  In order to do this, we check all of the mesh elements that are directly
+  connected and check if the angle between the two is suitable for generating
+  the next element.
+
+\item Look for other existing mesh elements nearby.
+
+  If there are any other nearby elements that are not directly connected with
+  the current one, we pick one of the point among them to construct the next
+  element. We look for nearby elements by calculating the distance from each
+  element to a certain point near or on the current element and therefore
+  does not require any interaction with the model itself. This is a
+  generalization of the previous step but requires more arithmetics and is
+  more expensive.
+
+\item Now we can add a new mesh element independent of other ones.
+
+  The only thing we still need to be careful about is the boundary of the
+  area, which is handled by the check\_crossing function.
+\end{itemize}
+
+During this process, we keep track of the new elements addes and in which
+directions they should be extended. We terminate the iteration when there is
+no element left to be extended and the whole space is covered.
 
 \section{Results and future improvements}
+
+Due to time constraint, we have only implemented and debugged the meshing
+algorithm for one and two dimensional systems.
 
 % \includegraphics[width=10cm]{../MeshGen/img/mesh1d.png}\\
 % \includegraphics[width=10cm]{../MeshGen/img/mesh2d_circ.png}\\
