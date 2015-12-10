@@ -247,4 +247,21 @@ smaller closed to the edge of the edge because of the projection.
 
 \section{Future improvements}
 
+While the algorithm works well for two dimenstional space of arbitrary shape and
+curvature, there are still many place that can be improved. The algorithm
+currently uses a naive approach to look for neighbering points and loop through
+all the elements currently generate. In practice, this is not necessary since
+elements that are too far away does not need to be checked. Even though the
+space is continious, we could still pre-discreteize it into regular square grid
+and use a hash table to map between the mesh element and the regular grid. This
+way, we can check only the elements that might be closed enough and ignoring all
+the rest.\\
+
+We also note that there are other optimization passes that can be implemented.
+We could reposition the grid point towards the center of the surrounding ones.
+If we happens to generate a edge that is too short, we could also simply shrink
+it and delete unnecessary elements. If we further tweak the parameters of
+finding closed by elements, we could improve the quality of the mesh directly
+generated without relying too much on optimizations.
+
 \end{document}
