@@ -16,6 +16,7 @@
 \usepackage[utf8x]{inputenc}
 \usepackage{feyn}
 \usepackage{feynmp}
+\usepackage{listings}
 \DeclareGraphicsRule{*}{mps}{*}{}
 \newcommand{\ud}{\mathrm{d}}
 \newcommand{\ue}{\mathrm{e}}
@@ -111,20 +112,51 @@ three-dimensional space.
 
 \subsection{Abstraction of the model}
 
-% Embedded in a higher dimension
+In order to generate a mesh, it is necessary to specify the problem first.
+Although we would like to handle arbitrary configurations mentioned in the
+previous section, we do not want to write specialized code for each problems.
+Therefore, before being able to generate the mesh, we first need a standardized
+interface to specify the properties of the problem. The interface needs to be
+flexible enough to cover different kinds of problems and it should also provide
+enough information to fully specify the problem. Moreover, the information
+provided by the interface should be relatively easy to generate during the
+construction of the problem and it should also be easy for the meshing
+algorithm to process.\\
 
-% Standardized interface
-% Expectations
+Due to the flexible requirement, we decided that the most important properties
+of the space is the constraint of allowed values (when the problem is embedded
+in a higher dimensional space) and the relation between different elements.
+These informations are important to make sure that the mesh we generate is
+an accurate description of the problem and is not over sampling the space.
+Therefore, in additional to the interfaces that provide basic informations
+(e.g. problem dimension, local mesh density) we define the following two
+functions to specify how to find the next point in the problem space from
+the current point, and if a new mesh element is intersecting with existing
+ones.
+
+\begin{lstlisting}
+    get_next_point{N,V}(model::AbstractModel{N,V}, point::V,
+                        step::V, section::Int, clip::Bool)
+    check_crossing{N,V}(model::AbstractModel{N,V}, orig_points::NTuple{N,V},
+                        point2::V, tileset::TileSet{N,V})
+\end{lstlisting}
+
+With a reasonably small grid size, these informations can be determined from
+only local informations of the model and are therefore easy to generate.
 
 \section{Implementation}
 
+Since our abstraction of the model only contain local information of the space,
+the algorithm we use to generate the mesh is naturally an iterative method
+that covers the whole space by locally extending the current mesh.
+
 \section{Results and future improvements}
 
-\includegraphics[width=10cm]{../MeshGen/img/mesh1d.png}\\
-\includegraphics[width=10cm]{../MeshGen/img/mesh2d_circ.png}\\
-\includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_noopt.png}
-\includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_opt.png}\\
-\includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_front.png}\\
-\includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_back.png}\\
+% \includegraphics[width=10cm]{../MeshGen/img/mesh1d.png}\\
+% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_circ.png}\\
+% \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_noopt.png}
+% \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_opt.png}\\
+% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_front.png}\\
+% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_back.png}\\
 
 \end{document}
