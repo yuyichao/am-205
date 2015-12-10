@@ -193,16 +193,58 @@ During this process, we keep track of the new elements addes and in which
 directions they should be extended. We terminate the iteration when there is
 no element left to be extended and the whole space is covered.
 
-\section{Results and future improvements}
+\section{Results}
 
 Due to time constraint, we have only implemented and debugged the meshing
-algorithm for one and two dimensional systems.
+algorithm for one and two dimensional systems. However, we could demonstrate
+that the algorithm works unmodified for meshing a curved space embedded in a
+higher dimention, for example, the edge of a circle or the surface of a sphere.
+We also demonstrated that we can use post-generation optimization passes to
+improve the homogeneity of the mesh.
 
-% \includegraphics[width=10cm]{../MeshGen/img/mesh1d.png}\\
-% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_circ.png}\\
-% \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_noopt.png}
-% \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_opt.png}\\
-% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_front.png}\\
-% \includegraphics[width=10cm]{../MeshGen/img/mesh2d_sphere_back.png}\\
+\subsection{Meshing the edge of a circle}
+
+\begin{center}
+  \includegraphics[width=8cm]{../MeshGen/img/mesh1d.png}
+\end{center}
+
+The coordinates are expressed directly with a two dimensional vector instead
+of a single number and the algorithm can handle this very well. We can also see
+the variation of the meshing density follows what we specified.
+
+\subsection{Meshing a circle with a hole and variable density}
+
+\begin{center}
+  \includegraphics[width=8cm]{../MeshGen/img/mesh2d_circ.png}
+\end{center}
+
+The algorithm smoothly connect the region near the hole with higher meshing
+density to the region near the center with lower density. It also correctly
+avoided the hole during the meshing process.
+
+\subsection{Post meshing optimization}
+
+\begin{center}
+  \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_noopt.png}
+  \includegraphics[width=6cm]{../MeshGen/img/mesh2d_circ_opt.png}\\
+\end{center}
+
+Here we show a part of the mesh before and after we apply the optimization pass.
+We clearly see that by rearranging the connection, we could remove many thin
+and unevenly sided triangles we generate.
+
+\subsection{Meshing a three dimenstional curved surface}
+
+\begin{center}
+  \includegraphics[width=7cm]{../MeshGen/img/mesh2d_sphere_front.png}
+  \includegraphics[width=7cm]{../MeshGen/img/mesh2d_sphere_back.png}
+\end{center}
+
+This is the result of meshing the surface of a sphere in three dimenstion using
+the same algorithm. The plot shows the projection of the mesh in the front and
+back side of the sphere onto a two dimensional plane. The mesh spacing are
+smaller closed to the edge of the edge because of the projection.
+
+\section{Future improvements}
 
 \end{document}
